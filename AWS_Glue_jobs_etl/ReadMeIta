@@ -1,0 +1,26 @@
+I 3 file che sono in questa cartella servono per la creazione delle 3 pipeline che andranno a preparare i dati come
+richiesto dalla traccia dell'esercizio.
+
+In paticolare:
+
+1. job_ETL_AWS_Glue_cleanning.py:
+    contiene uno script che permette di implementare una pipeline che andrà a trasformare
+    i dati pulendoli da eventuali missing e gestendo la trasformazione del dato nel corretto
+    data type. Andra quindi a salvare i dati SILVER.
+
+2. job_AWS_Glue_mobile_mean_and_fusione.py:
+    contiene uno script che permette di implementare una pipeline che andrà a
+    trasformare i dati rendendo i due file per i bitcoin e i due per monero
+    compatibili per la fusione in base all' indicatore temporale della data.
+    Quindi sarà eseguito sul file dei prezzi una media mobile con finestra
+    a 10 giorni che permetterà di andare a raggruppare i dati sintetizzandoli
+    con un osservazione a grana maggiore la quale permetterà la fusione con
+    l'altro file. Al termine questa pipeline produrrà due nuovi file che
+    costituiranno i dati GOLD pronti per essere salvati su di un database.
+
+3. load_amz_redshift.py:
+    contiene lo script che andrà a prelevare il dati processati dalle precedenti pipeline ovvero
+    i dati GOLD e li caricherà sul datawarehouse amazon redshift per future analisi.
+
+Ogni file contiene indicazione su come deve essere eseguito, dato che questi script dovranno essere tutti caricati come
+script di tipo spark nella creazione di un job ETL di AWS Glue.
