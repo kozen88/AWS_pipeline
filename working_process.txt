@@ -1,0 +1,95 @@
+WORKFLOW STEPS FOR CREATING THE REQUESTED PIPELINES:
+
+1.  We start by creating a bucket named raw from the AWS console, and we will upload the data to this bucket using
+    the Python script load_raw_data.py, which will handle uploading the 4 CSV files of interest to the raw bucket
+    created from the console.
+
+2. Once the bucket is created, and making sure to generate a user with access keys to run code locally, use these
+   credentials to appropriately replace them in the Python script load_raw_data.py, which should be run locally and
+    will allow the upload of the 4 files we will be using, namely:
+
+        - BTC-EUR-Historical-Data.csv
+        - XMR-EUR-Kraken-Historical-Data.csv
+        - google-trend-bitcoin.csv
+        - google-trend-monero.csv
+
+    At the end of the execution, if no errors are reported by the script,
+    we will find the files inside our bucket on AWS.
+
+3. Now we will work from the AWS console. Our goal is to create the scripts that will perform the ETL
+    transformation: --> T1 -- T2 -- Load. Note that the exercise required that the transformation steps be
+    parallelized as they operate on independent files, so it was chosen to delegate the parallelization of these
+    jobs directly to Spark as can be seen from the scripts.
+
+    Let's proceed with the process of an ETL job with AWS Glue:
+
+        - Search for the AWS Glue service from the AWS console
+        - Once found, select and access the ETL jobs section
+        - On the first panel presented with the Create Job text, click on Script Editor
+        - In the pop-up that opens, select Spark as the engine and choose Start fresh as the option
+        - Proceed with creating the script
+        - In the editor that opens, delete the existing code and paste the code present in the files for creating
+          the jobs, namely: T1.py, T2.py, and Load, each of which creates a phase of the pipeline we want to create.
+        - By selecting job details, we can name the job. The names used were respectively:
+                T1: RawToSilverJob
+                T2: SilverToGoldJob
+                Load: LoadToRedshiftJob
+        - Provide a description of the task
+        - Select the IAM role that must have been defined previously with access to AWS resources
+        - Only for the Load job, in the advanced settings, go to the Python library path section and enter the path to the bucket containing the boto3 and psycopg2 libraries, which will allow their use. For more details on this step, consult the Load.py file which contains an appropriate explanation.
+        - Conclude by clicking on Save to save the job thus created
+
+    Remember that 3 jobs need to be created.
+
+4. Creation of the Amazon Redshift data warehouse:
+
+        - Type Amazon Redshift in the search bar and select it
+        - From the side options panel, select Amazon Redshift Serverless
+        - Use the default settings to create the database
+        - Choose an IAM role that grants access to the resource
+        - Save the configuration
+        - From the serverless control panel, click on create a workgroup
+        - Give it a name
+        - Select the lowest possible capacity
+        - In the network and security configuration, choose IPv4, and in the security group section,
+           define one that allows access from AWS, the default one is fine since the pipeline operates from AWS
+        - Once the workgroup is defined, we can access the Redshift query editor
+        - Access it
+        - From the editor, create the database schema and the tables where we will load the data
+                - CREATE SCHEMA my_schema; --> defines the new schema
+
+                - CREATE TABLE btc_price (
+                    date DATE,
+                    price FLOAT
+                    );
+
+                - CREATE TABLE btc_google_trend (
+                      week DATE,
+                      interest INT
+                  );
+               - These will be the 2 tables that will host the gold data of the pipeline
+        - Define a new user with a password for the database:
+                 CREATE USER new_user WITH PASSWORD 'new_password';
+
+                 GRANT SELECT, INSERT, UPDATE, DELETE ON DATABASE CryptoDataDB TO new_user;
+                - Subsequently, assign this user the same role given to the serverless database
+                - This will allow the Load.py spark job script to be used correctly
+
+
+5. Orchestration of the entire pipeline with Step Function: To manage the execution of the entire process,
+   we will rely on Step Function and follow these steps:
+
+         - Type Step Function in the search bar
+         - Select the Step Function resource
+         - On the initial page, click on Get started at the top right
+         - Close the pop-up with the offered instructions for creating a Step Function
+         - On the top bar of the Step Function creation page, there are 3 options
+             - Design
+             - Code
+             - Configuration
+         - Click on Code
+         - Paste the JSON present in organizer_for_T1_T2_Load.py instead of the default one
+         - Click on Create
+         - Proceed with the confirmations
+
+Finally, you can execute the created Step Function from the console and monitor its progress.
